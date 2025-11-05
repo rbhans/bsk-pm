@@ -11,6 +11,8 @@ export interface Project {
   createdAt: string
   updatedAt: string
   color?: string
+  isInternal?: boolean
+  isArchived?: boolean
 }
 
 export interface Task {

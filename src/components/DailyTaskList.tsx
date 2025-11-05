@@ -3,26 +3,67 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Task } from '@/types'
-import { getTasks, addTask, updateTask, deleteTask, generateId } from '@/lib/storage'
-import { Plus, Trash2, Check } from 'lucide-react'
+import { getTasks, addTask, updateTask, deleteTask, generateId, saveTasks } from '@/lib/storage'
+import { Plus, Trash2, Check, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 
+const LAST_CHECK_KEY = 'psk_last_daily_check'
+
 export default function DailyTaskList() {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [todayTasks, setTodayTasks] = useState<Task[]>([])
+  const [missedTasks, setMissedTasks] = useState<Task[]>([])
   const [newTaskTitle, setNewTaskTitle] = useState('')
 
   useEffect(() => {
+    checkAndResetDailyTasks()
     loadTasks()
   }, [])
+
+  const checkAndResetDailyTasks = () => {
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const lastCheck = localStorage.getItem(LAST_CHECK_KEY)
+
+    // If it's a new day, move incomplete tasks to missed
+    if (lastCheck && lastCheck !== today) {
+      const allTasks = getTasks()
+      const updatedTasks = allTasks.map(task => {
+        if (task.isDaily && task.status !== 'completed' && task.createdAt.startsWith(lastCheck)) {
+          // Mark as missed by adding a missedDate field
+          return {
+            ...task,
+            missedDate: lastCheck,
+            createdAt: task.createdAt, // Keep original creation date
+          }
+        }
+        return task
+      })
+      saveTasks(updatedTasks)
+    }
+
+    // Update last check date
+    localStorage.setItem(LAST_CHECK_KEY, today)
+  }
 
   const loadTasks = () => {
     const allTasks = getTasks()
     const today = format(new Date(), 'yyyy-MM-dd')
-    // Show today's daily tasks and incomplete tasks
-    const dailyTasks = allTasks.filter(
-      task => task.isDaily && (!task.completedAt || task.completedAt.startsWith(today))
+
+    // Today's tasks: created today and not completed, or completed today
+    const today_tasks = allTasks.filter(
+      task => task.isDaily &&
+              task.createdAt.startsWith(today) &&
+              !(task as any).missedDate
     )
-    setTasks(dailyTasks)
+
+    // Missed tasks: have missedDate set and not completed
+    const missed_tasks = allTasks.filter(
+      task => task.isDaily &&
+              (task as any).missedDate &&
+              task.status !== 'completed'
+    )
+
+    setTodayTasks(today_tasks)
+    setMissedTasks(missed_tasks)
   }
 
   const handleAddTask = () => {
@@ -56,7 +97,54 @@ export default function DailyTaskList() {
     loadTasks()
   }
 
-  const completedCount = tasks.filter(t => t.status === 'completed').length
+  const handleCompleteMissedTask = (taskId: string) => {
+    deleteTask(taskId) // Remove missed tasks when completed
+    loadTasks()
+  }
+
+  const completedTodayCount = todayTasks.filter(t => t.status === 'completed').length
+
+  const renderTask = (task: Task, isMissed: boolean = false) => (
+    <div
+      key={task.id}
+      className={`flex items-center space-x-3 p-3 rounded-lg border ${
+        task.status === 'completed' ? 'bg-gray-50 dark:bg-gray-900 opacity-75' : 'bg-white dark:bg-gray-950'
+      } ${isMissed ? 'border-orange-300 dark:border-orange-700' : ''}`}
+    >
+      <button
+        onClick={() => isMissed ? handleCompleteMissedTask(task.id) : handleToggleTask(task.id, task.status)}
+        className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+          task.status === 'completed'
+            ? 'bg-matrix-green border-matrix-green'
+            : isMissed
+            ? 'border-orange-500 hover:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950'
+            : 'border-gray-300 hover:border-matrix-green'
+        }`}
+      >
+        {task.status === 'completed' && <Check size={14} className="text-white" />}
+      </button>
+      <span
+        className={`flex-1 text-sm ${
+          task.status === 'completed' ? 'line-through text-gray-500' : ''
+        }`}
+      >
+        {task.title}
+      </span>
+      {isMissed && (
+        <span className="text-xs text-orange-500 flex items-center gap-1">
+          <AlertCircle size={12} />
+          Missed
+        </span>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => handleDeleteTask(task.id)}
+      >
+        <Trash2 size={14} className="text-red-500" />
+      </Button>
+    </div>
+  )
 
   return (
     <Card>
@@ -64,12 +152,12 @@ export default function DailyTaskList() {
         <CardTitle className="flex items-center justify-between">
           <span>Daily Tasks</span>
           <span className="text-sm font-normal text-gray-500">
-            {completedCount}/{tasks.length} completed
+            {completedTodayCount}/{todayTasks.length} completed
           </span>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Add new task */}
           <div className="flex space-x-2">
             <Input
@@ -83,46 +171,28 @@ export default function DailyTaskList() {
             </Button>
           </div>
 
-          {/* Task list */}
+          {/* Missed Tasks Section */}
+          {missedTasks.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-orange-600 dark:text-orange-400 flex items-center gap-2">
+                <AlertCircle size={16} />
+                Missed Tasks ({missedTasks.length})
+              </h4>
+              <div className="space-y-2">
+                {missedTasks.map(task => renderTask(task, true))}
+              </div>
+            </div>
+          )}
+
+          {/* Today's Task list */}
           <div className="space-y-2">
-            {tasks.length === 0 ? (
+            <h4 className="text-sm font-semibold">Today's Tasks</h4>
+            {todayTasks.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-4">
                 No daily tasks yet. Add one above!
               </p>
             ) : (
-              tasks.map(task => (
-                <div
-                  key={task.id}
-                  className={`flex items-center space-x-3 p-3 rounded-lg border ${
-                    task.status === 'completed' ? 'bg-gray-50 opacity-75' : 'bg-white'
-                  }`}
-                >
-                  <button
-                    onClick={() => handleToggleTask(task.id, task.status)}
-                    className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                      task.status === 'completed'
-                        ? 'bg-matrix-green border-matrix-green'
-                        : 'border-gray-300 hover:border-matrix-green'
-                    }`}
-                  >
-                    {task.status === 'completed' && <Check size={14} className="text-white" />}
-                  </button>
-                  <span
-                    className={`flex-1 text-sm ${
-                      task.status === 'completed' ? 'line-through text-gray-500' : ''
-                    }`}
-                  >
-                    {task.title}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteTask(task.id)}
-                  >
-                    <Trash2 size={14} className="text-red-500" />
-                  </Button>
-                </div>
-              ))
+              todayTasks.map(task => renderTask(task, false))
             )}
           </div>
         </div>
