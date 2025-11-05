@@ -32,17 +32,20 @@ A modern, feature-rich project management application built for solo entrepreneu
 - Integrated Pomodoro timer with visual countdown
 - Customizable work/break durations
 - Session counter
-- Browser notifications when sessions complete
+- Audio notifications with pleasant beep sounds when sessions complete
+- Browser/system notifications support
 - Configurable long break intervals
 
 ### 🎨 Design
 - Clean, modern interface built with React and Tailwind CSS
+- Dark mode enabled by default with true blacks for OLED displays
 - Responsive design works on all devices
 - [basidekick] branding with signature matrix green accents
 - Professional shadcn/ui components
 
 ## Tech Stack
 
+- **Electron** - Cross-platform desktop application framework
 - **React 18** - Modern UI library
 - **TypeScript** - Type-safe development
 - **Vite** - Fast build tool and dev server
@@ -51,6 +54,7 @@ A modern, feature-rich project management application built for solo entrepreneu
 - **React Router** - Client-side routing
 - **Lucide React** - Beautiful icons
 - **date-fns** - Date utilities
+- **Web Audio API** - Audio notifications
 - **LocalStorage** - Client-side data persistence
 
 ## Getting Started
@@ -60,7 +64,28 @@ A modern, feature-rich project management application built for solo entrepreneu
 ```bash
 # Install dependencies
 npm install
+```
 
+### Running as Electron App (Desktop)
+
+```bash
+# Run in development mode (with hot reload)
+npm run electron:dev
+
+# Build Electron app for your platform
+npm run electron:build
+
+# Build for specific platforms
+npm run electron:build:win    # Windows
+npm run electron:build:mac    # macOS
+npm run electron:build:linux  # Linux
+```
+
+The built application will be in the `release/` directory.
+
+### Running as Web App (Browser)
+
+```bash
 # Start development server
 npm run dev
 
@@ -71,11 +96,11 @@ npm run build
 npm run preview
 ```
 
-### Development
-
 The app will be available at `http://localhost:5173` when running the dev server.
 
-All data is stored in your browser's localStorage, so it persists across sessions but is specific to your browser.
+### Development
+
+All data is stored in your browser's localStorage (or Electron's equivalent), so it persists across sessions.
 
 ## Usage
 
@@ -101,14 +126,18 @@ All data is stored in your browser's localStorage, so it persists across session
 - Tasks reset based on completion date
 
 ### Pomodoro Timer
-1. Click the settings icon to customize durations
-2. Click play to start a work session
-3. Timer automatically switches between work and break periods
-4. Enable browser notifications for session alerts
+1. Timer is visible in the header of every page
+2. Click the settings icon to customize durations
+3. Click play to start a work session
+4. Timer automatically switches between work and break periods
+5. Enjoy audio beeps and system notifications when sessions complete
 
 ## Project Structure
 
 ```
+electron/
+├── main.js          # Electron main process
+└── preload.js       # Electron preload script
 src/
 ├── components/
 │   ├── ui/           # shadcn/ui components

@@ -37,10 +37,58 @@ export default function PomodoroTimer() {
     }
   }, [isRunning, timeLeft])
 
+  const playNotificationSound = () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+
+    oscillator.frequency.value = 800
+    oscillator.type = 'sine'
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + 0.5)
+
+    // Play three beeps
+    setTimeout(() => {
+      const osc2 = audioContext.createOscillator()
+      const gain2 = audioContext.createGain()
+      osc2.connect(gain2)
+      gain2.connect(audioContext.destination)
+      osc2.frequency.value = 800
+      osc2.type = 'sine'
+      gain2.gain.setValueAtTime(0.3, audioContext.currentTime)
+      gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+      osc2.start()
+      osc2.stop(audioContext.currentTime + 0.5)
+    }, 200)
+
+    setTimeout(() => {
+      const osc3 = audioContext.createOscillator()
+      const gain3 = audioContext.createGain()
+      osc3.connect(gain3)
+      gain3.connect(audioContext.destination)
+      osc3.frequency.value = 1000
+      osc3.type = 'sine'
+      gain3.gain.setValueAtTime(0.3, audioContext.currentTime)
+      gain3.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7)
+      osc3.start()
+      osc3.stop(audioContext.currentTime + 0.7)
+    }, 400)
+  }
+
   const handleTimerComplete = () => {
     setIsRunning(false)
 
-    // Play notification sound (browser notification)
+    // Play audio notification
+    playNotificationSound()
+
+    // Browser notification
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Pomodoro Timer', {
         body: mode === 'work' ? 'Work session completed! Time for a break.' : 'Break over! Time to work.',
@@ -140,7 +188,7 @@ export default function PomodoroTimer() {
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Work Duration (minutes)</label>
+                  <label className="text-sm font-medium mb-1 block text-foreground">Work Duration (minutes)</label>
                   <Input
                     type="number"
                     value={settings.workDuration}
@@ -148,7 +196,7 @@ export default function PomodoroTimer() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Break Duration (minutes)</label>
+                  <label className="text-sm font-medium mb-1 block text-foreground">Break Duration (minutes)</label>
                   <Input
                     type="number"
                     value={settings.breakDuration}
@@ -156,7 +204,7 @@ export default function PomodoroTimer() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Long Break Duration (minutes)</label>
+                  <label className="text-sm font-medium mb-1 block text-foreground">Long Break Duration (minutes)</label>
                   <Input
                     type="number"
                     value={settings.longBreakDuration}
@@ -164,7 +212,7 @@ export default function PomodoroTimer() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Sessions Until Long Break</label>
+                  <label className="text-sm font-medium mb-1 block text-foreground">Sessions Until Long Break</label>
                   <Input
                     type="number"
                     value={settings.sessionsUntilLongBreak}
