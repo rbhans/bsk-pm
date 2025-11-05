@@ -13,6 +13,7 @@ export interface Project {
   color?: string
   isInternal?: boolean
   isArchived?: boolean
+  protonDriveLink?: string
 }
 
 export interface Task {

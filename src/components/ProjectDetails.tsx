@@ -17,7 +17,7 @@ import {
   deleteFile,
   generateId,
 } from '@/lib/storage'
-import { ArrowLeft, Clock, Upload, Trash2, Download, Save } from 'lucide-react'
+import { ArrowLeft, Clock, Upload, Trash2, Download, Save, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function ProjectDetails() {
@@ -67,6 +67,7 @@ export default function ProjectDetails() {
       clientEmail: project.clientEmail,
       clientPhone: project.clientPhone,
       status: project.status,
+      protonDriveLink: project.protonDriveLink,
     })
     setIsEditing(false)
     loadProjectData()
@@ -164,8 +165,8 @@ export default function ProjectDetails() {
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
-              <p className="text-gray-600 mt-1">Project Details</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{project.name}</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Project Details</p>
             </div>
           </div>
           <Button onClick={() => setIsEditing(!isEditing)}>
@@ -189,7 +190,7 @@ export default function ProjectDetails() {
                     onChange={(e) => setProject({ ...project, name: e.target.value })}
                   />
                 ) : (
-                  <p className="text-gray-900">{project.name}</p>
+                  <p className="text-gray-900 dark:text-white">{project.name}</p>
                 )}
               </div>
               <div>
@@ -206,7 +207,7 @@ export default function ProjectDetails() {
                     <option value="completed">Completed</option>
                   </select>
                 ) : (
-                  <p className="text-gray-900 capitalize">{project.status.replace('-', ' ')}</p>
+                  <p className="text-gray-900 dark:text-white capitalize">{project.status.replace('-', ' ')}</p>
                 )}
               </div>
               <div className="md:col-span-2">
@@ -218,7 +219,7 @@ export default function ProjectDetails() {
                     rows={3}
                   />
                 ) : (
-                  <p className="text-gray-900">{project.description || 'No description'}</p>
+                  <p className="text-gray-900 dark:text-white">{project.description || 'No description'}</p>
                 )}
               </div>
             </div>
@@ -226,49 +227,77 @@ export default function ProjectDetails() {
         </Card>
 
         {/* Client Info Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Client Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Client Name</label>
-                {isEditing ? (
-                  <Input
-                    value={project.clientName || ''}
-                    onChange={(e) => setProject({ ...project, clientName: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-gray-900">{project.clientName || 'Not specified'}</p>
-                )}
+        {!project.isInternal && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Client Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Client Name</label>
+                  {isEditing ? (
+                    <Input
+                      value={project.clientName || ''}
+                      onChange={(e) => setProject({ ...project, clientName: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-gray-900 dark:text-white">{project.clientName || 'Not specified'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Email</label>
+                  {isEditing ? (
+                    <Input
+                      type="email"
+                      value={project.clientEmail || ''}
+                      onChange={(e) => setProject({ ...project, clientEmail: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-gray-900 dark:text-white">{project.clientEmail || 'Not specified'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Phone</label>
+                  {isEditing ? (
+                    <Input
+                      value={project.clientPhone || ''}
+                      onChange={(e) => setProject({ ...project, clientPhone: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-gray-900 dark:text-white">{project.clientPhone || 'Not specified'}</p>
+                  )}
+                </div>
+                <div className="md:col-span-3">
+                  <label className="text-sm font-medium mb-1 block flex items-center gap-2">
+                    <ExternalLink size={16} />
+                    Proton Drive Link
+                  </label>
+                  {isEditing ? (
+                    <Input
+                      type="url"
+                      placeholder="https://drive.proton.me/..."
+                      value={project.protonDriveLink || ''}
+                      onChange={(e) => setProject({ ...project, protonDriveLink: e.target.value })}
+                    />
+                  ) : project.protonDriveLink ? (
+                    <a
+                      href={project.protonDriveLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2"
+                    >
+                      {project.protonDriveLink}
+                      <ExternalLink size={14} />
+                    </a>
+                  ) : (
+                    <p className="text-gray-500">Not specified</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Email</label>
-                {isEditing ? (
-                  <Input
-                    type="email"
-                    value={project.clientEmail || ''}
-                    onChange={(e) => setProject({ ...project, clientEmail: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-gray-900">{project.clientEmail || 'Not specified'}</p>
-                )}
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Phone</label>
-                {isEditing ? (
-                  <Input
-                    value={project.clientPhone || ''}
-                    onChange={(e) => setProject({ ...project, clientPhone: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-gray-900">{project.clientPhone || 'Not specified'}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {isEditing && (
           <Button onClick={handleSaveProject} className="w-full">
