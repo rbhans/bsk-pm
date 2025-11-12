@@ -7,7 +7,7 @@ import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Client, Project } from '@/types'
 import { getClients, updateClient, getProjects } from '@/lib/storage'
-import { ArrowLeft, Mail, Phone, FolderKanban, FileText, Save, Download, Palette, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, FolderKanban, FileText, Save } from 'lucide-react'
 
 export default function ClientDetails() {
   const { id } = useParams<{ id: string }>()
