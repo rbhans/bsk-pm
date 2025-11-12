@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Client } from '@/types'
+import { Client, ClientContact } from '@/types'
 import { addClient, updateClient, generateId } from '@/lib/storage'
 import { Upload, X, Plus, Check, Copy, Download } from 'lucide-react'
 
@@ -14,8 +14,7 @@ interface ClientFormProps {
 export default function ClientForm({ client, onSave, onCancel }: ClientFormProps) {
   const [formData, setFormData] = useState({
     name: client?.name || '',
-    email: client?.email || '',
-    phone: client?.phone || '',
+    contacts: client?.contacts || [{ name: '', email: '', phone: '' }],
     logo: client?.logo || '',
     colorPalette: client?.colorPalette || [],
   })
@@ -91,17 +90,48 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
     }
   }
 
+  const handleAddContact = () => {
+    setFormData({
+      ...formData,
+      contacts: [...formData.contacts, { name: '', email: '', phone: '' }],
+    })
+  }
+
+  const handleRemoveContact = (index: number) => {
+    // Always keep at least one contact
+    if (formData.contacts.length === 1) {
+      alert('At least one contact is required')
+      return
+    }
+    setFormData({
+      ...formData,
+      contacts: formData.contacts.filter((_, idx) => idx !== index),
+    })
+  }
+
+  const handleUpdateContact = (index: number, field: keyof ClientContact, value: string) => {
+    const updatedContacts = [...formData.contacts]
+    updatedContacts[index] = { ...updatedContacts[index], [field]: value }
+    setFormData({ ...formData, contacts: updatedContacts })
+  }
+
   const handleSubmit = () => {
     if (!formData.name.trim()) {
       alert('Please enter a client name')
       return
     }
 
+    // Validate at least one contact with a name
+    const validContacts = formData.contacts.filter(c => c.name.trim())
+    if (validContacts.length === 0) {
+      alert('Please provide at least one contact with a name')
+      return
+    }
+
     const clientData: Client = {
       id: client?.id || generateId(),
       name: formData.name,
-      email: formData.email || undefined,
-      phone: formData.phone || undefined,
+      contacts: validContacts,
       logo: formData.logo || undefined,
       colorPalette: formData.colorPalette.length > 0 ? formData.colorPalette : undefined,
       createdAt: client?.createdAt || new Date().toISOString(),
@@ -129,22 +159,69 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
         </div>
-        <div>
-          <label className="text-sm font-medium mb-1 block">Email</label>
-          <Input
-            type="email"
-            placeholder="client@example.com"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
+      </div>
+
+      {/* Contacts */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium">Contacts *</label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddContact}
+          >
+            <Plus size={14} className="mr-1" />
+            Add Contact
+          </Button>
         </div>
-        <div>
-          <label className="text-sm font-medium mb-1 block">Phone</label>
-          <Input
-            placeholder="Phone number"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          />
+        <div className="space-y-3">
+          {formData.contacts.map((contact, index) => (
+            <div key={index} className="p-4 border border-border rounded-lg space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-muted-foreground">
+                  Contact {index + 1}
+                </span>
+                {formData.contacts.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveContact(index)}
+                    className="h-7 px-2 text-muted-foreground hover:text-red-500"
+                  >
+                    <X size={14} className="mr-1" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Name *</label>
+                <Input
+                  placeholder="Contact name"
+                  value={contact.name}
+                  onChange={(e) => handleUpdateContact(index, 'name', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Email</label>
+                <Input
+                  type="email"
+                  placeholder="contact@example.com"
+                  value={contact.email || ''}
+                  onChange={(e) => handleUpdateContact(index, 'email', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Phone</label>
+                <Input
+                  placeholder="Phone number"
+                  value={contact.phone || ''}
+                  onChange={(e) => handleUpdateContact(index, 'phone', e.target.value)}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

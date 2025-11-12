@@ -45,10 +45,17 @@ export default function ClientsList() {
   }
 
   const filteredClients = useMemo(() => {
-    return clients.filter(client =>
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    return clients.filter(client => {
+      const query = searchQuery.toLowerCase()
+      // Search in client name
+      if (client.name.toLowerCase().includes(query)) return true
+      // Search in any contact's name, email, or phone
+      return client.contacts.some(contact =>
+        contact.name.toLowerCase().includes(query) ||
+        contact.email?.toLowerCase().includes(query) ||
+        contact.phone?.toLowerCase().includes(query)
+      )
+    })
   }, [clients, searchQuery])
 
   return (
@@ -115,11 +122,15 @@ export default function ClientsList() {
                   )}
                   <div className="flex-1">
                     <h4 className="font-medium text-sm">{client.name}</h4>
-                    {client.email && (
-                      <p className="text-xs text-muted-foreground">{client.email}</p>
-                    )}
-                    {client.phone && (
-                      <p className="text-xs text-muted-foreground">{client.phone}</p>
+                    {client.contacts[0] && (
+                      <>
+                        {client.contacts[0].name && (
+                          <p className="text-xs text-muted-foreground font-medium">{client.contacts[0].name}</p>
+                        )}
+                        {client.contacts[0].email && (
+                          <p className="text-xs text-muted-foreground">{client.contacts[0].email}</p>
+                        )}
+                      </>
                     )}
                   </div>
                   {client.colorPalette && client.colorPalette.length > 0 && (

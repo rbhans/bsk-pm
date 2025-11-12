@@ -1,10 +1,15 @@
 export type KanbanStatus = 'backlog' | 'in-progress' | 'review' | 'completed'
 
-export interface Client {
-  id: string
+export interface ClientContact {
   name: string
   email?: string
   phone?: string
+}
+
+export interface Client {
+  id: string
+  name: string
+  contacts: ClientContact[]
   logo?: string // base64 or blob URL
   colorPalette?: string[] // array of hex color codes
   notes?: string
@@ -64,19 +69,4 @@ export interface FileAttachment {
   size: number
   url: string // base64 or blob URL
   uploadedAt: string
-}
-
-export interface PomodoroSettings {
-  workDuration: number // in minutes
-  breakDuration: number // in minutes
-  longBreakDuration: number // in minutes
-  sessionsUntilLongBreak: number
-}
-
-export interface PomodoroSession {
-  startTime: string
-  endTime?: string
-  type: 'work' | 'break' | 'long-break'
-  projectId?: string
-  completed: boolean
 }

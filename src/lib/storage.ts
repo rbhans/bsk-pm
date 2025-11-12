@@ -1,11 +1,10 @@
-import { Project, Task, TimeEntry, FileAttachment, PomodoroSettings, Client } from '@/types'
+import { Project, Task, TimeEntry, FileAttachment, Client } from '@/types'
 
 const STORAGE_KEYS = {
   PROJECTS: 'psk_projects',
   TASKS: 'psk_tasks',
   TIME_ENTRIES: 'psk_time_entries',
   FILES: 'psk_files',
-  POMODORO_SETTINGS: 'psk_pomodoro_settings',
   CLIENTS: 'psk_clients',
 }
 
@@ -153,20 +152,6 @@ export function deleteFile(id: string): void {
   saveFiles(files.filter(f => f.id !== id))
 }
 
-// Pomodoro Settings
-export function getPomodoroSettings(): PomodoroSettings {
-  return getFromStorage<PomodoroSettings>(STORAGE_KEYS.POMODORO_SETTINGS, {
-    workDuration: 25,
-    breakDuration: 5,
-    longBreakDuration: 15,
-    sessionsUntilLongBreak: 4,
-  })
-}
-
-export function savePomodoroSettings(settings: PomodoroSettings): void {
-  saveToStorage(STORAGE_KEYS.POMODORO_SETTINGS, settings)
-}
-
 // Clients
 export function getClients(): Client[] {
   return getFromStorage<Client[]>(STORAGE_KEYS.CLIENTS, [])
@@ -214,7 +199,6 @@ export function exportAllData(): string {
     tasks: getTasks(),
     timeEntries: getTimeEntries(),
     files: getFiles(),
-    pomodoroSettings: getPomodoroSettings(),
     exportDate: new Date().toISOString(),
     version: '1.0'
   }
@@ -236,7 +220,6 @@ export function importAllData(jsonData: string): { success: boolean; error?: str
     if (data.tasks) saveTasks(data.tasks)
     if (data.timeEntries) saveTimeEntries(data.timeEntries)
     if (data.files) saveFiles(data.files)
-    if (data.pomodoroSettings) savePomodoroSettings(data.pomodoroSettings)
 
     return { success: true }
   } catch (error) {
