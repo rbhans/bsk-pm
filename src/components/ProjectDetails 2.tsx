@@ -17,7 +17,7 @@ import {
   deleteFile,
   generateId,
 } from '@/lib/storage'
-import { ArrowLeft, Clock, Upload, Trash2, Download, Save, ExternalLink, FileText } from 'lucide-react'
+import { ArrowLeft, Clock, Upload, Trash2, Download, Save, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function ProjectDetails() {
@@ -31,26 +31,14 @@ export default function ProjectDetails() {
   // Time entry form
   const [newTimeEntry, setNewTimeEntry] = useState({
     description: '',
-    hours: '',
-    minutes: '',
+    duration: '',
     date: format(new Date(), 'yyyy-MM-dd'),
   })
 
   useEffect(() => {
-    if (!id) return
-
-    // Inline data loading to avoid stale closures
-    const projects = getProjects()
-    const foundProject = projects.find(p => p.id === id)
-    if (foundProject) {
-      setProject(foundProject)
+    if (id) {
+      loadProjectData()
     }
-
-    const allTimeEntries = getTimeEntries()
-    setTimeEntries(allTimeEntries.filter(entry => entry.projectId === id))
-
-    const allFiles = getFiles()
-    setFiles(allFiles.filter(file => file.projectId === id))
   }, [id])
 
   const loadProjectData = () => {
@@ -80,27 +68,19 @@ export default function ProjectDetails() {
       clientPhone: project.clientPhone,
       status: project.status,
       protonDriveLink: project.protonDriveLink,
-      dueDate: project.dueDate,
-      notes: project.notes,
     })
     setIsEditing(false)
     loadProjectData()
   }
 
   const handleAddTimeEntry = () => {
-    if (!id || !newTimeEntry.description) return
-
-    const hours = parseInt(newTimeEntry.hours) || 0
-    const minutes = parseInt(newTimeEntry.minutes) || 0
-    const totalMinutes = (hours * 60) + minutes
-
-    if (totalMinutes === 0) return
+    if (!id || !newTimeEntry.description || !newTimeEntry.duration) return
 
     const entry: TimeEntry = {
       id: generateId(),
       projectId: id,
       description: newTimeEntry.description,
-      duration: totalMinutes,
+      duration: parseInt(newTimeEntry.duration),
       date: newTimeEntry.date,
       createdAt: new Date().toISOString(),
     }
@@ -108,8 +88,7 @@ export default function ProjectDetails() {
     addTimeEntry(entry)
     setNewTimeEntry({
       description: '',
-      hours: '',
-      minutes: '',
+      duration: '',
       date: format(new Date(), 'yyyy-MM-dd'),
     })
     loadProjectData()
@@ -119,30 +98,6 @@ export default function ProjectDetails() {
     if (!id || !e.target.files) return
 
     const file = e.target.files[0]
-
-    // Validate file size (max 5MB for localStorage safety)
-    const maxSize = 5 * 1024 * 1024 // 5MB in bytes
-    if (file.size > maxSize) {
-      alert('File size must be less than 5MB to avoid storage issues.')
-      e.target.value = '' // Reset file input
-      return
-    }
-
-    // Validate file type - allow common document types
-    const allowedTypes = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-      'application/pdf',
-      'text/plain', 'text/csv',
-      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ]
-
-    if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Please upload images, PDFs, or common document formats.')
-      e.target.value = '' // Reset file input
-      return
-    }
-
     const reader = new FileReader()
 
     reader.onload = (event) => {
@@ -158,12 +113,6 @@ export default function ProjectDetails() {
 
       addFile(fileAttachment)
       loadProjectData()
-      e.target.value = '' // Reset file input after successful upload
-    }
-
-    reader.onerror = () => {
-      alert('Failed to read file. Please try again.')
-      e.target.value = '' // Reset file input
     }
 
     reader.readAsDataURL(file)
@@ -195,7 +144,7 @@ export default function ProjectDetails() {
     return (
       <Layout>
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Project not found</p>
+          <p className="text-gray-500">Project not found</p>
           <Button onClick={() => navigate('/')} className="mt-4">
             <ArrowLeft size={16} className="mr-2" />
             Back to Dashboard
@@ -216,8 +165,8 @@ export default function ProjectDetails() {
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">{project.name}</h1>
-              <p className="text-muted-foreground mt-1">Project Details</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{project.name}</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Project Details</p>
             </div>
           </div>
           <Button onClick={() => setIsEditing(!isEditing)}>
@@ -241,7 +190,7 @@ export default function ProjectDetails() {
                     onChange={(e) => setProject({ ...project, name: e.target.value })}
                   />
                 ) : (
-                  <p className="text-foreground">{project.name}</p>
+                  <p className="text-gray-900 dark:text-white">{project.name}</p>
                 )}
               </div>
               <div>
@@ -258,21 +207,7 @@ export default function ProjectDetails() {
                     <option value="completed">Completed</option>
                   </select>
                 ) : (
-                  <p className="text-foreground capitalize">{project.status.replace('-', ' ')}</p>
-                )}
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Due Date</label>
-                {isEditing ? (
-                  <Input
-                    type="date"
-                    value={project.dueDate || ''}
-                    onChange={(e) => setProject({ ...project, dueDate: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-foreground">
-                    {project.dueDate ? format(new Date(project.dueDate), 'MMM dd, yyyy') : 'No due date set'}
-                  </p>
+                  <p className="text-gray-900 dark:text-white capitalize">{project.status.replace('-', ' ')}</p>
                 )}
               </div>
               <div className="md:col-span-2">
@@ -284,7 +219,7 @@ export default function ProjectDetails() {
                     rows={3}
                   />
                 ) : (
-                  <p className="text-foreground">{project.description || 'No description'}</p>
+                  <p className="text-gray-900 dark:text-white">{project.description || 'No description'}</p>
                 )}
               </div>
             </div>
@@ -307,7 +242,7 @@ export default function ProjectDetails() {
                       onChange={(e) => setProject({ ...project, clientName: e.target.value })}
                     />
                   ) : (
-                    <p className="text-foreground">{project.clientName || 'Not specified'}</p>
+                    <p className="text-gray-900 dark:text-white">{project.clientName || 'Not specified'}</p>
                   )}
                 </div>
                 <div>
@@ -319,7 +254,7 @@ export default function ProjectDetails() {
                       onChange={(e) => setProject({ ...project, clientEmail: e.target.value })}
                     />
                   ) : (
-                    <p className="text-foreground">{project.clientEmail || 'Not specified'}</p>
+                    <p className="text-gray-900 dark:text-white">{project.clientEmail || 'Not specified'}</p>
                   )}
                 </div>
                 <div>
@@ -330,18 +265,18 @@ export default function ProjectDetails() {
                       onChange={(e) => setProject({ ...project, clientPhone: e.target.value })}
                     />
                   ) : (
-                    <p className="text-foreground">{project.clientPhone || 'Not specified'}</p>
+                    <p className="text-gray-900 dark:text-white">{project.clientPhone || 'Not specified'}</p>
                   )}
                 </div>
                 <div className="md:col-span-3">
                   <label className="text-sm font-medium mb-1 block flex items-center gap-2">
                     <ExternalLink size={16} />
-                    Cloud Storage Link
+                    Proton Drive Link
                   </label>
                   {isEditing ? (
                     <Input
                       type="url"
-                      placeholder="https://..."
+                      placeholder="https://drive.proton.me/..."
                       value={project.protonDriveLink || ''}
                       onChange={(e) => setProject({ ...project, protonDriveLink: e.target.value })}
                     />
@@ -350,13 +285,13 @@ export default function ProjectDetails() {
                       href={project.protonDriveLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-matrix-green hover:underline flex items-center gap-2"
+                      className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2"
                     >
                       {project.protonDriveLink}
                       <ExternalLink size={14} />
                     </a>
                   ) : (
-                    <p className="text-muted-foreground">Not specified</p>
+                    <p className="text-gray-500">Not specified</p>
                   )}
                 </div>
               </div>
@@ -387,27 +322,17 @@ export default function ProjectDetails() {
           <CardContent>
             <div className="space-y-4">
               {/* Add Time Entry */}
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-3 p-4 bg-muted rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-gray-800 dark:bg-gray-900 rounded-lg">
                 <Input
                   placeholder="What did you work on?"
                   value={newTimeEntry.description}
                   onChange={(e) => setNewTimeEntry({ ...newTimeEntry, description: e.target.value })}
-                  className="md:col-span-2"
-                />
-                <Input
-                  type="number"
-                  placeholder="Hours"
-                  min="0"
-                  value={newTimeEntry.hours || ''}
-                  onChange={(e) => setNewTimeEntry({ ...newTimeEntry, hours: e.target.value })}
                 />
                 <Input
                   type="number"
                   placeholder="Minutes"
-                  min="0"
-                  max="59"
-                  value={newTimeEntry.minutes || ''}
-                  onChange={(e) => setNewTimeEntry({ ...newTimeEntry, minutes: e.target.value })}
+                  value={newTimeEntry.duration}
+                  onChange={(e) => setNewTimeEntry({ ...newTimeEntry, duration: e.target.value })}
                 />
                 <Input
                   type="date"
@@ -423,18 +348,18 @@ export default function ProjectDetails() {
               {/* Time Entries List */}
               <div className="space-y-2">
                 {timeEntries.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-sm text-gray-500 text-center py-4">
                     No time entries yet. Log your first session above!
                   </p>
                 ) : (
                   timeEntries.map(entry => (
                     <div
                       key={entry.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted"
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-800 dark:hover:bg-gray-900"
                     >
                       <div className="flex-1">
                         <p className="font-medium text-sm">{entry.description}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-gray-500">
                           {format(new Date(entry.date), 'MMM dd, yyyy')}
                         </p>
                       </div>
@@ -447,7 +372,7 @@ export default function ProjectDetails() {
                           size="icon"
                           onClick={() => handleDeleteTimeEntry(entry.id)}
                         >
-                          <Trash2 size={16} className="text-muted-foreground hover:text-white" />
+                          <Trash2 size={16} className="text-red-500" />
                         </Button>
                       </div>
                     </div>
@@ -482,18 +407,18 @@ export default function ProjectDetails() {
           <CardContent>
             <div className="space-y-2">
               {files.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-sm text-gray-500 text-center py-4">
                   No files uploaded yet. Upload one above!
                 </p>
               ) : (
                 files.map(file => (
                   <div
                     key={file.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted"
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-800 dark:hover:bg-gray-900"
                   >
                     <div className="flex-1">
                       <p className="font-medium text-sm">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-gray-500">
                         {formatFileSize(file.size)} • {format(new Date(file.uploadedAt), 'MMM dd, yyyy')}
                       </p>
                     </div>
@@ -508,42 +433,13 @@ export default function ProjectDetails() {
                         size="icon"
                         onClick={() => handleDeleteFile(file.id)}
                       >
-                        <Trash2 size={16} className="text-muted-foreground hover:text-white" />
+                        <Trash2 size={16} className="text-red-500" />
                       </Button>
                     </div>
                   </div>
                 ))
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Notes Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText size={20} />
-              <span>Project Notes</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isEditing ? (
-              <Textarea
-                placeholder="Add any persistent notes about this project..."
-                value={project.notes || ''}
-                onChange={(e) => setProject({ ...project, notes: e.target.value })}
-                rows={8}
-                className="w-full"
-              />
-            ) : (
-              <div className="min-h-[100px] p-4 bg-muted rounded-lg">
-                {project.notes ? (
-                  <p className="text-foreground whitespace-pre-wrap">{project.notes}</p>
-                ) : (
-                  <p className="text-muted-foreground italic">No notes yet. Click Edit to add notes.</p>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

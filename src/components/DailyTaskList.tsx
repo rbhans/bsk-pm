@@ -108,8 +108,8 @@ export default function DailyTaskList() {
     <div
       key={task.id}
       className={`flex items-center space-x-3 p-3 rounded-lg border ${
-        task.status === 'completed' ? 'bg-gray-50 dark:bg-gray-900 opacity-75' : 'bg-white dark:bg-gray-950'
-      } ${isMissed ? 'border-orange-300 dark:border-orange-700' : ''}`}
+        task.status === 'completed' ? 'bg-muted opacity-75' : 'bg-card'
+      } ${isMissed ? 'border-border' : ''}`}
     >
       <button
         onClick={() => isMissed ? handleCompleteMissedTask(task.id) : handleToggleTask(task.id, task.status)}
@@ -117,21 +117,21 @@ export default function DailyTaskList() {
           task.status === 'completed'
             ? 'bg-matrix-green border-matrix-green'
             : isMissed
-            ? 'border-orange-500 hover:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950'
-            : 'border-gray-300 hover:border-matrix-green'
+            ? 'border-muted-foreground hover:border-muted-foreground hover:bg-muted'
+            : 'border-border hover:border-matrix-green'
         }`}
       >
         {task.status === 'completed' && <Check size={14} className="text-white" />}
       </button>
       <span
         className={`flex-1 text-sm ${
-          task.status === 'completed' ? 'line-through text-gray-500' : ''
+          task.status === 'completed' ? 'line-through text-muted-foreground' : ''
         }`}
       >
         {task.title}
       </span>
       {isMissed && (
-        <span className="text-xs text-orange-500 flex items-center gap-1">
+        <span className="text-xs text-muted-foreground flex items-center gap-1">
           <AlertCircle size={12} />
           Missed
         </span>
@@ -141,7 +141,7 @@ export default function DailyTaskList() {
         size="icon"
         onClick={() => handleDeleteTask(task.id)}
       >
-        <Trash2 size={14} className="text-red-500" />
+        <Trash2 size={14} className="text-muted-foreground hover:text-white" />
       </Button>
     </div>
   )
@@ -151,7 +151,7 @@ export default function DailyTaskList() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Daily Tasks</span>
-          <span className="text-sm font-normal text-gray-500">
+          <span className="text-sm font-normal text-muted-foreground">
             {completedTodayCount}/{todayTasks.length} completed
           </span>
         </CardTitle>
@@ -174,7 +174,7 @@ export default function DailyTaskList() {
           {/* Missed Tasks Section */}
           {missedTasks.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-orange-600 dark:text-orange-400 flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                 <AlertCircle size={16} />
                 Missed Tasks ({missedTasks.length})
               </h4>
@@ -188,7 +188,7 @@ export default function DailyTaskList() {
           <div className="space-y-2">
             <h4 className="text-sm font-semibold">Today's Tasks</h4>
             {todayTasks.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">
+              <p className="text-sm text-muted-foreground text-center py-4">
                 No daily tasks yet. Add one above!
               </p>
             ) : (

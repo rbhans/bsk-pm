@@ -1,9 +1,24 @@
 export type KanbanStatus = 'backlog' | 'in-progress' | 'review' | 'completed'
 
+export interface Client {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  logo?: string // base64 or blob URL
+  colorPalette?: string[] // array of hex color codes
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Project {
   id: string
   name: string
   description: string
+  // Client reference - new approach
+  clientId?: string
+  // Legacy client fields - kept for backward compatibility
   clientName?: string
   clientEmail?: string
   clientPhone?: string
@@ -14,6 +29,8 @@ export interface Project {
   isInternal?: boolean
   isArchived?: boolean
   protonDriveLink?: string
+  dueDate?: string
+  notes?: string
 }
 
 export interface Task {
@@ -27,6 +44,7 @@ export interface Task {
   createdAt: string
   completedAt?: string
   isDaily: boolean
+  missedDate?: string // Date when a daily task was missed
 }
 
 export interface TimeEntry {

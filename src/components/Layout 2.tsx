@@ -1,24 +1,10 @@
 import { ReactNode, useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Play, Pause, RotateCcw, Settings, Download, Upload, RefreshCw } from 'lucide-react'
+import { Play, Pause, RotateCcw, Settings, Download, Upload } from 'lucide-react'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
 import { Input } from './ui/input'
 import { getPomodoroSettings, savePomodoroSettings, exportAllData, importAllData } from '@/lib/storage'
-
-// Declare window.electron type
-declare global {
-  interface Window {
-    electron?: {
-      onUpdateAvailable: (callback: (info: any) => void) => void
-      onUpdateDownloaded: (callback: (info: any) => void) => void
-      onDownloadProgress: (callback: (progress: any) => void) => void
-      downloadUpdate: () => Promise<{success: boolean}>
-      installUpdate: () => void
-      removeUpdateListeners: () => void
-    }
-  }
-}
 
 interface LayoutProps {
   children: ReactNode
@@ -80,13 +66,37 @@ export default function Layout({ children }: LayoutProps) {
   const intervalRef = useRef<ReturnType<typeof setInterval>>()
   const importFileRef = useRef<HTMLInputElement>(null)
 
-  // Auto-update state
-  const [updateAvailable, setUpdateAvailable] = useState(false)
-  const [updateDownloaded, setUpdateDownloaded] = useState(false)
-  const [downloadProgress, setDownloadProgress] = useState(0)
-  const [isDownloading, setIsDownloading] = useState(false)
+  // Save timer state to localStorage whenever it changes
+  useEffect(() => {
+    saveTimerState({
+      mode,
+      timeLeft,
+      isRunning,
+      sessionsCompleted,
+      lastUpdateTime: Date.now(),
+    })
+  }, [mode, timeLeft, isRunning, sessionsCompleted])
 
-  // Define functions before they're used in effects
+  useEffect(() => {
+    if (isRunning && timeLeft > 0) {
+      intervalRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            handleTimerComplete()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [isRunning, timeLeft, handleTimerComplete])
+
   const playNotificationSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
     const oscillator = audioContext.createOscillator()
@@ -167,37 +177,6 @@ export default function Layout({ children }: LayoutProps) {
     setIsRunning(true)
   }, [mode, sessionsCompleted, settings])
 
-  // Save timer state to localStorage whenever it changes
-  useEffect(() => {
-    saveTimerState({
-      mode,
-      timeLeft,
-      isRunning,
-      sessionsCompleted,
-      lastUpdateTime: Date.now(),
-    })
-  }, [mode, timeLeft, isRunning, sessionsCompleted])
-
-  useEffect(() => {
-    if (isRunning && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            handleTimerComplete()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [isRunning, timeLeft, handleTimerComplete])
-
   const handlePlayPause = () => {
     if (!isRunning && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
@@ -256,43 +235,6 @@ export default function Layout({ children }: LayoutProps) {
     }
   }
 
-  const handleDownloadUpdate = async () => {
-    setIsDownloading(true)
-    if (window.electron) {
-      await window.electron.downloadUpdate()
-    }
-  }
-
-  const handleInstallUpdate = () => {
-    if (window.electron) {
-      window.electron.installUpdate()
-    }
-  }
-
-  // Set up auto-update listeners
-  useEffect(() => {
-    if (window.electron) {
-      window.electron.onUpdateAvailable(() => {
-        setUpdateAvailable(true)
-      })
-
-      window.electron.onUpdateDownloaded(() => {
-        setUpdateDownloaded(true)
-        setIsDownloading(false)
-      })
-
-      window.electron.onDownloadProgress((progress) => {
-        setDownloadProgress(progress.percent || 0)
-      })
-    }
-
-    return () => {
-      if (window.electron) {
-        window.electron.removeUpdateListeners()
-      }
-    }
-  }, [])
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -302,11 +244,11 @@ export default function Layout({ children }: LayoutProps) {
   const getModeColor = () => {
     switch (mode) {
       case 'work':
-        return 'text-muted-foreground'
+        return 'text-gray-400'
       case 'break':
         return 'text-matrix-green'
       case 'long-break':
-        return 'text-muted-foreground'
+        return 'text-gray-400'
     }
   }
 
@@ -322,9 +264,9 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50 dark:bg-black">
       {/* Header with custom title bar for Electron */}
-      <header className="sticky top-0 z-50 bg-background text-white shadow-lg border-b border-border" style={{ WebkitAppRegion: 'drag' } as any}>
+      <header className="sticky top-0 z-50 bg-gray-900 dark:bg-black text-white shadow-lg border-b border-gray-800" style={{ WebkitAppRegion: 'drag' } as any}>
         <div className="relative flex justify-between pr-4" style={{ height: '48px' }}>
           {/* Left: Project Name - positioned to align with traffic lights */}
           <Link
@@ -346,34 +288,6 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Right: Export/Import and Pomodoro Timer */}
           <div className="ml-auto flex items-center self-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as any}>
-            {/* Update notification */}
-            {updateAvailable && !updateDownloaded && !isDownloading && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleDownloadUpdate}
-                className="h-7 text-xs border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-              >
-                <RefreshCw size={12} className="mr-1" />
-                Update Available
-              </Button>
-            )}
-            {isDownloading && (
-              <div className="text-xs text-muted-foreground">
-                Downloading... {Math.round(downloadProgress)}%
-              </div>
-            )}
-            {updateDownloaded && (
-              <Button
-                size="sm"
-                onClick={handleInstallUpdate}
-                className="h-7 text-xs bg-primary hover:bg-primary/90"
-              >
-                <RefreshCw size={12} className="mr-1" />
-                Restart to Update
-              </Button>
-            )}
-
             {/* Export/Import buttons */}
             <div className="flex items-center gap-1">
               <Button
@@ -405,7 +319,7 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Pomodoro Timer - compact design */}
             <div
-              className="flex items-center gap-2 px-3 py-1 bg-card/50 backdrop-blur-sm rounded-md border border-border/50"
+              className="flex items-center gap-2 px-3 py-1 bg-gray-800/50 backdrop-blur-sm rounded-md border border-gray-700/50"
             >
             <span className={`text-[10px] font-medium uppercase tracking-wide ${getModeColor()}`}>
               {getModeLabel()}
@@ -413,10 +327,10 @@ export default function Layout({ children }: LayoutProps) {
             <span className="text-base font-mono font-bold tabular-nums">
               {formatTime(timeLeft)}
             </span>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[10px] text-gray-500">
               {sessionsCompleted}
             </span>
-            <div className="flex items-center gap-0.5 ml-1 pl-2 border-l border-border">
+            <div className="flex items-center gap-0.5 ml-1 pl-2 border-l border-gray-700">
               <Button
                 size="icon"
                 variant="ghost"
@@ -494,7 +408,7 @@ export default function Layout({ children }: LayoutProps) {
       </main>
 
       {/* Footer */}
-      <footer className="bg-background text-muted-foreground text-center py-4 mt-12 border-t border-border">
+      <footer className="bg-black text-gray-400 text-center py-4 mt-12 border-t border-gray-800">
         <p className="text-sm">
           <span className="text-matrix-green">[</span>
           <span>basidekick</span>

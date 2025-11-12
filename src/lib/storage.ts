@@ -1,4 +1,4 @@
-import { Project, Task, TimeEntry, FileAttachment, PomodoroSettings } from '@/types'
+import { Project, Task, TimeEntry, FileAttachment, PomodoroSettings, Client } from '@/types'
 
 const STORAGE_KEYS = {
   PROJECTS: 'psk_projects',
@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   TIME_ENTRIES: 'psk_time_entries',
   FILES: 'psk_files',
   POMODORO_SETTINGS: 'psk_pomodoro_settings',
+  CLIENTS: 'psk_clients',
 }
 
 // Generic storage functions
@@ -21,9 +22,36 @@ function getFromStorage<T>(key: string, defaultValue: T): T {
 
 function saveToStorage<T>(key: string, value: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
+    const serialized = JSON.stringify(value)
+
+    // Check approximate size (rough estimate)
+    const sizeInBytes = new Blob([serialized]).size
+    const sizeInMB = sizeInBytes / (1024 * 1024)
+
+    // Warning at 4MB to prevent hitting the typical 5-10MB quota
+    if (sizeInMB > 4) {
+      console.warn(`⚠️ Storage size for ${key} is ${sizeInMB.toFixed(2)}MB. Consider exporting and archiving old data.`)
+    }
+
+    localStorage.setItem(key, serialized)
+  } catch (error: any) {
     console.error(`Error saving ${key} to storage:`, error)
+
+    // Handle quota exceeded error specifically
+    if (error.name === 'QuotaExceededError' || error.code === 22) {
+      alert(
+        'Storage quota exceeded!\n\n' +
+        'Your project data has become too large for browser storage.\n\n' +
+        'Please try one of the following:\n' +
+        '• Export your data using the download button in the header\n' +
+        '• Delete some old files or archived projects\n' +
+        '• Clear browser cache for this site'
+      )
+    } else {
+      alert('Failed to save data. Please try again or contact support if the issue persists.')
+    }
+
+    throw error // Re-throw so caller knows save failed
   }
 }
 
@@ -139,7 +167,79 @@ export function savePomodoroSettings(settings: PomodoroSettings): void {
   saveToStorage(STORAGE_KEYS.POMODORO_SETTINGS, settings)
 }
 
+// Clients
+export function getClients(): Client[] {
+  return getFromStorage<Client[]>(STORAGE_KEYS.CLIENTS, [])
+}
+
+export function saveClients(clients: Client[]): void {
+  saveToStorage(STORAGE_KEYS.CLIENTS, clients)
+}
+
+export function addClient(client: Client): void {
+  const clients = getClients()
+  clients.push(client)
+  saveClients(clients)
+}
+
+export function updateClient(id: string, updates: Partial<Client>): void {
+  const clients = getClients()
+  const index = clients.findIndex(c => c.id === id)
+  if (index !== -1) {
+    clients[index] = { ...clients[index], ...updates, updatedAt: new Date().toISOString() }
+    saveClients(clients)
+  }
+}
+
+export function deleteClient(id: string): void {
+  const clients = getClients()
+  saveClients(clients.filter(c => c.id !== id))
+}
+
+export function getClientById(id: string): Client | undefined {
+  const clients = getClients()
+  return clients.find(c => c.id === id)
+}
+
 // Generate unique IDs
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
+// Export/Import functionality
+export function exportAllData(): string {
+  const data = {
+    projects: getProjects(),
+    clients: getClients(),
+    tasks: getTasks(),
+    timeEntries: getTimeEntries(),
+    files: getFiles(),
+    pomodoroSettings: getPomodoroSettings(),
+    exportDate: new Date().toISOString(),
+    version: '1.0'
+  }
+  return JSON.stringify(data, null, 2)
+}
+
+export function importAllData(jsonData: string): { success: boolean; error?: string } {
+  try {
+    const data = JSON.parse(jsonData)
+
+    // Validate data structure
+    if (!data.version) {
+      return { success: false, error: 'Invalid data format: missing version' }
+    }
+
+    // Import data
+    if (data.projects) saveProjects(data.projects)
+    if (data.clients) saveClients(data.clients)
+    if (data.tasks) saveTasks(data.tasks)
+    if (data.timeEntries) saveTimeEntries(data.timeEntries)
+    if (data.files) saveFiles(data.files)
+    if (data.pomodoroSettings) savePomodoroSettings(data.pomodoroSettings)
+
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
 }

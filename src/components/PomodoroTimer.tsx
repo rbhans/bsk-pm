@@ -152,11 +152,11 @@ export default function PomodoroTimer() {
   const getModeColor = () => {
     switch (mode) {
       case 'work':
-        return 'text-red-600'
+        return 'text-muted-foreground'
       case 'break':
-        return 'text-green-600'
+        return 'text-matrix-green'
       case 'long-break':
-        return 'text-blue-600'
+        return 'text-muted-foreground'
     }
   }
 
@@ -177,7 +177,7 @@ export default function PomodoroTimer() {
         <div className="flex items-center justify-between">
           <CardTitle>Pomodoro Timer</CardTitle>
           <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-            <DialogTrigger>
+            <DialogTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Settings size={18} />
               </Button>
@@ -239,7 +239,7 @@ export default function PomodoroTimer() {
                 stroke="currentColor"
                 strokeWidth="8"
                 fill="none"
-                className="text-gray-200"
+                className="text-muted"
               />
               <circle
                 cx="96"
@@ -264,7 +264,7 @@ export default function PomodoroTimer() {
 
           {/* Session Counter */}
           <div className="text-center">
-            <div className="text-sm text-gray-500">Sessions Completed</div>
+            <div className="text-sm text-muted-foreground">Sessions Completed</div>
             <div className="text-2xl font-bold text-matrix-green">{sessionsCompleted}</div>
           </div>
 
