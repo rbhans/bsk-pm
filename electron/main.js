@@ -24,8 +24,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs')
     },
     titleBarStyle: 'hiddenInset', // Hides title bar but keeps traffic lights on macOS
-    autoHideMenuBar: true,
-    icon: path.join(__dirname, '../public/icon.png')
+    autoHideMenuBar: true
   })
 
   // Load the app
@@ -38,6 +37,15 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null
+  })
+
+  // Error logging for debugging
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[Renderer ${level}]:`, message, `(${sourceId}:${line})`)
+  })
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('Failed to load:', errorCode, errorDescription, validatedURL)
   })
 }
 
