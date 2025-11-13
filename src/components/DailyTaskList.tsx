@@ -5,7 +5,7 @@ import { Input } from './ui/input'
 import { Task } from '@/types'
 import { getTasks, addTask, updateTask, deleteTask, generateId, saveTasks } from '@/lib/storage'
 import { Plus, Trash2, Check, AlertCircle } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, parseISO, isSameDay, isToday } from 'date-fns'
 
 const LAST_CHECK_KEY = 'psk_last_daily_check'
 
@@ -26,8 +26,9 @@ export default function DailyTaskList() {
     // If it's a new day, move incomplete tasks to missed
     if (lastCheck && lastCheck !== today) {
       const allTasks = getTasks()
+      const lastCheckDate = parseISO(lastCheck)
       const updatedTasks = allTasks.map(task => {
-        if (task.isDaily && task.status !== 'completed' && task.createdAt.startsWith(lastCheck)) {
+        if (task.isDaily && task.status !== 'completed' && isSameDay(parseISO(task.createdAt), lastCheckDate)) {
           // Mark as missed by adding a missedDate field
           return {
             ...task,
@@ -46,12 +47,11 @@ export default function DailyTaskList() {
 
   const loadTasks = () => {
     const allTasks = getTasks()
-    const today = format(new Date(), 'yyyy-MM-dd')
 
-    // Today's tasks: created today and not completed, or completed today
+    // Today's tasks: created today and not missed
     const today_tasks = allTasks.filter(
       task => task.isDaily &&
-              task.createdAt.startsWith(today) &&
+              isToday(parseISO(task.createdAt)) &&
               !(task as any).missedDate
     )
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
-import { Project, TimeEntry, FileAttachment, KanbanStatus } from '@/types'
+import { Project, TimeEntry, FileAttachment, KanbanStatus, Client } from '@/types'
 import {
   getProjects,
   updateProject,
@@ -16,6 +16,7 @@ import {
   addFile,
   deleteFile,
   generateId,
+  getClientById,
 } from '@/lib/storage'
 import { ArrowLeft, Clock, Upload, Trash2, Download, Save, ExternalLink, FileText } from 'lucide-react'
 import { format } from 'date-fns'
@@ -24,6 +25,7 @@ export default function ProjectDetails() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [project, setProject] = useState<Project | null>(null)
+  const [linkedClient, setLinkedClient] = useState<Client | null>(null)
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
   const [files, setFiles] = useState<FileAttachment[]>([])
   const [isEditing, setIsEditing] = useState(false)
@@ -44,6 +46,13 @@ export default function ProjectDetails() {
     const foundProject = projects.find(p => p.id === id)
     if (foundProject) {
       setProject(foundProject)
+      // Load linked client if clientId exists
+      if (foundProject.clientId) {
+        const client = getClientById(foundProject.clientId)
+        setLinkedClient(client || null)
+      } else {
+        setLinkedClient(null)
+      }
     }
 
     const allTimeEntries = getTimeEntries()
@@ -60,6 +69,13 @@ export default function ProjectDetails() {
     const foundProject = projects.find(p => p.id === id)
     if (foundProject) {
       setProject(foundProject)
+      // Load linked client if clientId exists
+      if (foundProject.clientId) {
+        const client = getClientById(foundProject.clientId)
+        setLinkedClient(client || null)
+      } else {
+        setLinkedClient(null)
+      }
     }
 
     const allTimeEntries = getTimeEntries()
@@ -75,9 +91,12 @@ export default function ProjectDetails() {
     updateProject(id, {
       name: project.name,
       description: project.description,
-      clientName: project.clientName,
-      clientEmail: project.clientEmail,
-      clientPhone: project.clientPhone,
+      // Preserve clientId if it exists
+      clientId: project.clientId,
+      // Only update legacy fields if there's no clientId
+      clientName: project.clientId ? undefined : project.clientName,
+      clientEmail: project.clientId ? undefined : project.clientEmail,
+      clientPhone: project.clientId ? undefined : project.clientPhone,
       status: project.status,
       protonDriveLink: project.protonDriveLink,
       dueDate: project.dueDate,
@@ -220,7 +239,7 @@ export default function ProjectDetails() {
               <p className="text-muted-foreground mt-1">Project Details</p>
             </div>
           </div>
-          <Button onClick={() => setIsEditing(!isEditing)}>
+          <Button onClick={() => isEditing ? handleSaveProject() : setIsEditing(true)}>
             {isEditing ? <Save size={16} className="mr-2" /> : 'Edit'}
             {isEditing ? 'Save' : ''}
           </Button>
@@ -298,42 +317,81 @@ export default function ProjectDetails() {
               <CardTitle>Client Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-4">
+                {linkedClient ? (
+                  // Display linked client data
+                  <>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Client</label>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-normal text-base text-matrix-green hover:underline"
+                        onClick={() => navigate(`/client/${linkedClient.id}`)}
+                      >
+                        {linkedClient.name}
+                      </Button>
+                    </div>
+                    {linkedClient.contacts && linkedClient.contacts.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Contacts</label>
+                        <div className="space-y-2">
+                          {linkedClient.contacts.map((contact, index) => (
+                            <div key={index} className="p-3 bg-muted rounded-lg">
+                              <p className="font-medium text-sm">{contact.name}</p>
+                              {contact.email && (
+                                <p className="text-xs text-muted-foreground mt-1">{contact.email}</p>
+                              )}
+                              {contact.phone && (
+                                <p className="text-xs text-muted-foreground">{contact.phone}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // Display legacy client fields (for old projects without clientId)
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Client Name</label>
+                      {isEditing ? (
+                        <Input
+                          value={project.clientName || ''}
+                          onChange={(e) => setProject({ ...project, clientName: e.target.value })}
+                        />
+                      ) : (
+                        <p className="text-foreground">{project.clientName || 'Not specified'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Email</label>
+                      {isEditing ? (
+                        <Input
+                          type="email"
+                          value={project.clientEmail || ''}
+                          onChange={(e) => setProject({ ...project, clientEmail: e.target.value })}
+                        />
+                      ) : (
+                        <p className="text-foreground">{project.clientEmail || 'Not specified'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Phone</label>
+                      {isEditing ? (
+                        <Input
+                          value={project.clientPhone || ''}
+                          onChange={(e) => setProject({ ...project, clientPhone: e.target.value })}
+                        />
+                      ) : (
+                        <p className="text-foreground">{project.clientPhone || 'Not specified'}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cloud Storage Link - separate from client info */}
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Client Name</label>
-                  {isEditing ? (
-                    <Input
-                      value={project.clientName || ''}
-                      onChange={(e) => setProject({ ...project, clientName: e.target.value })}
-                    />
-                  ) : (
-                    <p className="text-foreground">{project.clientName || 'Not specified'}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Email</label>
-                  {isEditing ? (
-                    <Input
-                      type="email"
-                      value={project.clientEmail || ''}
-                      onChange={(e) => setProject({ ...project, clientEmail: e.target.value })}
-                    />
-                  ) : (
-                    <p className="text-foreground">{project.clientEmail || 'Not specified'}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Phone</label>
-                  {isEditing ? (
-                    <Input
-                      value={project.clientPhone || ''}
-                      onChange={(e) => setProject({ ...project, clientPhone: e.target.value })}
-                    />
-                  ) : (
-                    <p className="text-foreground">{project.clientPhone || 'Not specified'}</p>
-                  )}
-                </div>
-                <div className="md:col-span-3">
                   <label className="text-sm font-medium mb-1 block flex items-center gap-2">
                     <ExternalLink size={16} />
                     Cloud Storage Link
@@ -362,13 +420,6 @@ export default function ProjectDetails() {
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {isEditing && (
-          <Button onClick={handleSaveProject} className="w-full">
-            <Save size={16} className="mr-2" />
-            Save All Changes
-          </Button>
         )}
 
         {/* Time Tracking Card */}
